@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#22c55e"/>
+<title>MASAR — تسجيل الدخول</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--border:#2a2a2a;--green:#22c55e;--white:#f5f5f5;--dim:#a3a3a3;--faint:#525252;--red:#ef4444;--r:12px}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--white);min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+.wrap{width:100%;max-width:400px}
+.brand{text-align:center;margin-bottom:36px}
+.logo{width:60px;height:60px;background:var(--green);color:#000;font-family:'Bebas Neue',sans-serif;font-size:2.2rem;display:flex;align-items:center;justify-content:center;border-radius:14px;margin:0 auto 14px;box-shadow:0 0 36px rgba(34,197,94,0.22)}
+.brand-name{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:4px;color:var(--white);line-height:1}
+.brand-sub{font-size:.72rem;color:var(--faint);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:32px}
+.card-title{font-size:1rem;font-weight:700;text-align:center;margin-bottom:24px;color:var(--dim)}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.75rem;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.form-group input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--white);font-family:'Cairo',sans-serif;font-size:.9rem;outline:none;transition:border-color .15s}
+.form-group input:focus{border-color:var(--green)}
+.btn{width:100%;background:var(--green);color:#000;border:none;border-radius:8px;padding:13px;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;transition:all .18s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover:not(:disabled){background:#16a34a;transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:.85rem;color:var(--red);margin-bottom:16px;display:none}
+.err.show{display:block}
+.spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{text-align:center;margin-top:20px;font-size:.73rem;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="logo" id="login-logo">M</div>
+    <div class="brand-name" id="login-brand-name">MASAR</div>
+    <div class="brand-sub">Brand Manager</div>
+  </div>
+  <div class="card">
+    <div class="card-title">تسجيل الدخول</div>
+    <div class="err" id="err-msg"></div>
+    <div class="form-group">
+      <label>رقم الهاتف</label>
+      <input type="tel" id="phone" placeholder="01xxxxxxxxx" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')login()"/>
+    </div>
+    <button class="btn" id="login-btn" onclick="login()">
+      <span class="spinner" id="spinner"></span>
+      <span id="btn-text">دخول</span>
+    </button>
+  </div>
+  <div class="footer">MASAR Brand Manager v3</div>
+</div>
+<script>
+// If already logged in redirect
+(function(){
+  if(localStorage.getItem('masar_token')){
+    try{ if(JSON.parse(localStorage.getItem('masar_user'))) window.location.href='/'; }catch(e){}
+  }
+})();
+
+// Load brand settings for login page branding
+fetch('/api/settings',{headers:{'Authorization':'Bearer '}}).then(r=>r.json()).then(d=>{
+  if(d?.success){
+    if(d.data.brand_name) document.getElementById('login-brand-name').textContent=d.data.brand_name;
+    if(d.data.brand_logo){
+      const l=document.getElementById('login-logo');
+      l.innerHTML=`<img src="${d.data.brand_logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px" alt="logo"/>`;
+    }
+  }
+}).catch(()=>{});
+
+async function login(){
+  const phone    = document.getElementById('phone').value.trim();
+  const password = document.getElementById('password').value;
+  const btn      = document.getElementById('login-btn');
+  const errEl    = document.getElementById('err-msg');
+  const spinner  = document.getElementById('spinner');
+  const btnText  = document.getElementById('btn-text');
+
+  if(!phone||!password){ showErr('أدخل الهاتف وكلمة المرور'); return; }
+
+  btn.disabled=true; spinner.style.display='block'; btnText.textContent='جاري الدخول...';
+  errEl.classList.remove('show');
+
+  try{
+    const res = await fetch('/api/auth/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({phone,password})
+    });
+    const data = await res.json();
+    if(!data.success){ showErr(data.message); return; }
+    const userData = data.data.user;
+    // Ensure permissions array is stored for applyPermissionsUI()
+    if (!userData.permissions) userData.permissions = [];
+    localStorage.setItem('masar_token', data.data.token);
+    localStorage.setItem('masar_user',  JSON.stringify(userData));
+    window.location.href='/';
+  } catch(e){ showErr('فشل الاتصال بالسيرفر'); }
+  finally{ btn.disabled=false; spinner.style.display='none'; btnText.textContent='دخول'; }
+}
+
+function showErr(msg){
+  const e=document.getElementById('err-msg');
+  e.textContent=msg; e.classList.add('show');
+}
+</script>
+</body>
+</html>
