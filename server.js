@@ -9,11 +9,10 @@ const path        = require('path');
 const os          = require('os');
 const rateLimit   = require('express-rate-limit');
 
-const app   = express();
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+const app  = express();
+
+// --- التعديل المهم هنا: تعريف الـ PORT في الأول عشان الكل يشوفه ---
+const PORT = process.env.PORT || 10000; 
 const isDev = process.env.NODE_ENV !== 'production';
 
 app.use(helmet({ contentSecurityPolicy:false, crossOriginEmbedderPolicy:false }));
@@ -53,12 +52,9 @@ app.use('/api/leave',         require('./routes/leave'));
 
 app.get('/api/health', (req,res)=>res.json({status:'ok',version:'4.0.0',env:process.env.NODE_ENV||'dev',ts:new Date().toISOString()}));
 
-// ── QR code route — returns a simple HTML page with QR for the local URL ──────
-// No external services: uses the free qrserver.com API (just an <img> tag — works offline-ish via cache)
-// Or: generates a pure SVG QR via a tiny inline approach using the free API.
 app.get('/qr', (req, res) => {
   const localIP  = _getLocalIP();
-  const url      = `http://${localIP}:${PORT}`;
+  const url      = `https://masar-system.onrender.com`; // خليناها الرابط المباشر بتاعك
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}`;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!DOCTYPE html>
@@ -79,22 +75,16 @@ app.get('/qr', (req, res) => {
   .qr-wrap img{display:block;width:220px;height:220px}
   .url{font-size:.9rem;color:#22c55e;font-family:monospace;word-break:break-all;
        background:#0d1f13;border:1px solid #1a3d21;border-radius:8px;padding:10px 14px;margin-bottom:20px}
-  .hint{font-size:.75rem;color:#555;line-height:1.6}
-  .hint strong{color:#888}
 </style>
 </head>
 <body>
 <div class="card">
   <h1>MASAR</h1>
-  <div class="sub">افتح من الجوال</div>
+  <div class="sub">نظام مسار الإداري</div>
   <div class="qr-wrap">
-    <img src="${qrImgUrl}" alt="QR Code" onerror="this.parentElement.innerHTML='<div style=padding:20px;color:#333;font-size:.8rem>QR unavailable<br>use URL below</div>'"/>
+    <img src="${qrImgUrl}" alt="QR Code"/>
   </div>
   <div class="url">${url}</div>
-  <div class="hint">
-    <strong>تأكد أن الجوال والكمبيوتر</strong><br>
-    على نفس شبكة الـ Wi-Fi ثم امسح الـ QR أو اكتب الرابط في المتصفح
-  </div>
 </div>
 </body>
 </html>`);
@@ -104,7 +94,6 @@ app.use('/api/*', (req,res)=>res.status(404).json({success:false,message:'Endpoi
 app.get('*', (req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 app.use((e,req,res,_next)=>{ console.error('[Error]',e); res.status(500).json({success:false,message:isDev?e.message:'خطأ داخلي'}); });
 
-// ── Helper: get local LAN IP ──────────────────────────────────────────────────
 function _getLocalIP() {
   const ifaces = os.networkInterfaces();
   for (const name of Object.keys(ifaces)) {
@@ -115,16 +104,9 @@ function _getLocalIP() {
   return 'localhost';
 }
 
+// تشغيل السيرفر مرة واحدة فقط في نهاية الملف
 app.listen(PORT, '0.0.0.0', () => {
-  const localIP = _getLocalIP();
-  console.log(`
-╔══════════════════════════════════════════════╗
-║           MASAR v4.0  —  Running             ║
-╠══════════════════════════════════════════════╣
-║  Local   →  http://localhost:${PORT}           ║
-║  Network →  http://${localIP}:${PORT}        ║
-║  QR Code →  http://${localIP}:${PORT}/qr     ║
-╚══════════════════════════════════════════════╝
-  `);
+  console.log(`Server is running on port ${PORT}`);
 });
+
 module.exports = app;
