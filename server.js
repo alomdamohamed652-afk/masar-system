@@ -31,8 +31,8 @@ app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
 app.set('trust proxy', 1);
 
-app.use(express.static(path.join(__dirname,'public'), { maxAge: isDev?0:'1d', etag:true }));
-
+// التعديل الصح عشان يقرأ فولدر public
+app.use(express.static(path.join(__dirname, 'public')));
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/products',      require('./routes/products'));
